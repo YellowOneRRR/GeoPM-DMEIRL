@@ -1,6 +1,5 @@
 import numpy as np
 from GeoPM import get_epsilon, piecewise_mechanism
-from hausdorff import hausdorff_distance
 import transform
 import hashlib
 import tensorflow as tf
@@ -9,11 +8,11 @@ import gym
 OUTPUT_GRAPH = False
 MAX_EPISODE = 2000
 MAX_EP_STEPS = 200
-DISPLAY_REWARD_THRESHOLD = -100  # renders environment if total episode reward is greater then this threshold
-RENDER = False  # rendering wastes time
+DISPLAY_REWARD_THRESHOLD = -100
+RENDER = False
 GAMMA = 0.9
-LR_A = 0.001    # learning rate for actor
-LR_C = 0.01     # learning rate for critic
+LR_A = 0.001
+LR_C = 0.01
 
 class Actor(object):
     def __init__(self, sess, n_features, action_bound, lr=0.0001):
@@ -21,32 +20,32 @@ class Actor(object):
 
         self.s = tf.placeholder(tf.float32, [1, n_features], "state")
         self.a = tf.placeholder(tf.float32, None, name="act")
-        self.td_error = tf.placeholder(tf.float32, None, name="td_error")  # TD_error
+        self.td_error = tf.placeholder(tf.float32, None, name="td_error")
 
         l1 = tf.layers.dense(
             inputs=self.s,
-            units=30,  # number of hidden units
+            units=30,
             activation=tf.nn.relu,
-            kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
-            bias_initializer=tf.constant_initializer(0.1),  # biases
+            kernel_initializer=tf.random_normal_initializer(0., .1),
+            bias_initializer=tf.constant_initializer(0.1),
             name='l1'
         )
 
         mu = tf.layers.dense(
             inputs=l1,
-            units=1,  # number of hidden units
+            units=1,
             activation=tf.nn.tanh,
-            kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
-            bias_initializer=tf.constant_initializer(0.1),  # biases
+            kernel_initializer=tf.random_normal_initializer(0., .1),
+            bias_initializer=tf.constant_initializer(0.1),
             name='mu'
         )
 
         sigma = tf.layers.dense(
             inputs=l1,
-            units=1,  # output units
-            activation=tf.nn.softplus,  # get action probabilities
-            kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
-            bias_initializer=tf.constant_initializer(1.),  # biases
+            units=1,
+            activation=tf.nn.softplus,
+            kernel_initializer=tf.random_normal_initializer(0., .1),
+            bias_initializer=tf.constant_initializer(1.),
             name='sigma'
         )
         global_step = tf.Variable(0, trainable=False)
@@ -57,13 +56,12 @@ class Actor(object):
         self.action = tf.clip_by_value(self.normal_dist.sample(1), action_bound[0], action_bound[1])
 
         with tf.name_scope('exp_v'):
-            log_prob = self.normal_dist.log_prob(self.a)  # loss without advantage
-            self.exp_v = log_prob * self.td_error  # advantage (TD_error) guided loss
-            # Add cross entropy cost to encourage exploration
+            log_prob = self.normal_dist.log_prob(self.a)
+            self.exp_v = log_prob * self.td_error
             self.exp_v += 0.01*self.normal_dist.entropy()
 
         with tf.name_scope('train'):
-            self.train_op = tf.train.AdamOptimizer(lr).minimize(-self.exp_v, global_step)    # min(v) = max(-v)
+            self.train_op = tf.train.AdamOptimizer(lr).minimize(-self.exp_v, global_step)
 
     def learn(self, s, a, td):
         s = s[np.newaxis, :]
@@ -87,25 +85,25 @@ class Critic(object):
         with tf.variable_scope('Critic'):
             l1 = tf.layers.dense(
                 inputs=self.s,
-                units=30,  # number of hidden units
+                units=30,
                 activation=tf.nn.relu,
-                kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
-                bias_initializer=tf.constant_initializer(0.1),  # biases
+                kernel_initializer=tf.random_normal_initializer(0., .1),
+                bias_initializer=tf.constant_initializer(0.1),
                 name='l1'
             )
 
             self.v = tf.layers.dense(
                 inputs=l1,
-                units=1,  # output units
+                units=1,
                 activation=None,
-                kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
-                bias_initializer=tf.constant_initializer(0.1),  # biases
+                kernel_initializer=tf.random_normal_initializer(0., .1),
+                bias_initializer=tf.constant_initializer(0.1),
                 name='V'
             )
 
         with tf.variable_scope('squared_TD_error'):
             self.td_error = tf.reduce_mean(self.r + GAMMA * self.v_ - self.v)
-            self.loss = tf.square(self.td_error)    # TD_error = (r+gamma*V_next) - V_eval
+            self.loss = tf.square(self.td_error)
         with tf.variable_scope('train'):
             self.train_op = tf.train.AdamOptimizer(lr).minimize(self.loss)
 

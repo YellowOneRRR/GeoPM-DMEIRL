@@ -71,7 +71,7 @@ class Actor(object):
 
     def choose_action(self, s):
         s = s[np.newaxis, :]
-        return self.sess.run(self.action, {self.s: s})  # get probabilities for all actions
+        return self.sess.run(self.action, {self.s: s})
 
 
 class Critic(object):
@@ -85,10 +85,10 @@ class Critic(object):
         with tf.variable_scope('Critic'):
             l1 = tf.layers.dense(
                 inputs=self.s,
-                units=30,  # number of hidden units
+                units=30,
                 activation=tf.nn.relu,
-                kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
-                bias_initializer=tf.constant_initializer(0.1),  # biases
+                kernel_initializer=tf.random_normal_initializer(0., .1),
+                bias_initializer=tf.constant_initializer(0.1),
                 name='l1'
             )
 
@@ -96,14 +96,14 @@ class Critic(object):
                 inputs=l1,
                 units=1,  # output units
                 activation=None,
-                kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
-                bias_initializer=tf.constant_initializer(0.1),  # biases
+                kernel_initializer=tf.random_normal_initializer(0., .1),
+                bias_initializer=tf.constant_initializer(0.1),
                 name='V'
             )
 
         with tf.variable_scope('squared_TD_error'):
             self.td_error = tf.reduce_mean(self.r + GAMMA * self.v_ - self.v)
-            self.loss = tf.square(self.td_error)    # TD_error = (r+gamma*V_next) - V_eval
+            self.loss = tf.square(self.td_error)
         with tf.variable_scope('train'):
             self.train_op = tf.train.AdamOptimizer(lr).minimize(self.loss)
 
@@ -198,7 +198,7 @@ class GeolifeEnv:
         self.data_dir = data_dir
         self.max_length = max_length
         self.action_space = spaces.Discrete(6)
-        self.observation_space = spaces.Box(low=0, high=1, shape=(4,), dtype=np.float32)  # 状态空间
+        self.observation_space = spaces.Box(low=0, high=1, shape=(4,), dtype=np.float32)
 
     def get_traj(self):
         objects = self.s3.list_objects_v2(Bucket=self.bucket_name, Prefix=self.data_dir)
@@ -243,10 +243,10 @@ class GeolifeEnv:
     def get_state(self, curr_pos, next_pos):
         lat1, lon1 = curr_pos
         lat2, lon2 = next_pos
-        dist = geodesic(curr_pos, next_pos).km  # 两点间距离
-        speed = 3.6 * dist  # 手动移动速度为每小时3.6km
-        bearing = np.degrees(np.arctan2(lon2 - lon1, lat2 - lat1))  # 方向
-        time_diff = 1  # 时间间隔（以秒为单位）
+        dist = geodesic(curr_pos, next_pos).km
+        speed = 3.6 * dist
+        bearing = np.degrees(np.arctan2(lon2 - lon1, lat2 - lat1))
+        time_diff = 1
         return np.array([dist, speed, bearing, time_diff])
 
     def random_policy(self, state):
